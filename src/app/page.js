@@ -1,12 +1,91 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaArrowDown, FaArrowUp } from "react-icons/fa";
 import { GrResume, GrPowerReset } from "react-icons/gr";
 
 export default function Home() {
-  const [breakl, setBreakl] = useState(5);
-  const [session, setSession] = useState(25);
-  const [time, setTime] = useState(session);
+  const [breakLength, setBreakLength] = useState(5);
+  const [sessionLength, setSessionLength] = useState(25);
+  const [time, setTime] = useState(sessionLength * 60);
+  const [isRunning, setIsRunning] = useState(false);
+  const [end, setEnd] = useState('');
+
+  useEffect(() => {
+    let countdown;
+
+    if (isRunning) {
+      countdown = setInterval(() => {
+        setTime(prevTime => {
+          if (prevTime > 0) {
+            return prevTime - 1;
+          } else {
+            if (sessionLength === prevTime / 60) {
+              setSessionLength(prevLength => {
+                if (prevLength === 1) {
+                  setBreakLength(5);
+                  return 25;
+                }
+                return prevLength - 1;
+              });
+              return prevTime;
+            } else {
+              // setSessionLength(prevLength => prevLength + 1);
+              let audio = new Audio('/audios/beep.mp3');
+              audio.play();
+              setEnd(`Time's up`);
+              return prevTime;
+            }
+          }
+        });
+      }, 1000);
+    } else {
+      clearInterval(countdown);
+    }
+
+    return () => {
+      clearInterval(countdown);
+    };
+  }, [isRunning, sessionLength]);
+
+
+
+  const formatTime = seconds => {
+    const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const remainingSeconds = (seconds % 60).toString().padStart(2, '0');
+    return `${minutes}:${remainingSeconds}`;
+  };
+
+  const toggleTimer = () => {
+    setIsRunning(prev => !prev);
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    setBreakLength(5);
+    setSessionLength(25);
+    setTime(25 * 60);
+    setEnd('');
+  };
+
+  const adjustLength = (type, target) => {
+    if (isRunning) return;
+
+    if (target === 'break') {
+      if (type === 'decrement' && breakLength > 1) {
+        setBreakLength(prevLength => prevLength - 1);
+      } else if (type === 'increment') {
+        setBreakLength(prevLength => prevLength + 1);
+      }
+    } else if (target === 'session') {
+      if (type === 'decrement' && sessionLength > 1) {
+        setSessionLength(prevLength => prevLength - 1);
+        setTime(prevTime => prevTime - 60);
+      } else if (type === 'increment') {
+        setSessionLength(prevLength => prevLength + 1);
+        setTime(prevTime => prevTime + 60);
+      }
+    }
+  };
 
   return (
     <main
@@ -28,16 +107,16 @@ export default function Home() {
               <button
                 id="break-decrement"
                 className="font-bold text-black mx-1"
-                onClick={()=>setBreakl(breakl - 1)}
+                onClick={()=>adjustLength('decrement', 'break')}
               >
                 
                 <FaArrowDown />
               </button>
-              <span id="break-length"> {breakl} </span>
+              <span id="break-length"> {breakLength} </span>
               <button
                 id="break-increment"
                 className="font-bold text-black mx-1"
-                onClick={()=>setBreakl(breakl + 1)}
+                onClick={()=>adjustLength('increment', 'break')}
               >
               
                 <FaArrowUp />
@@ -53,16 +132,16 @@ export default function Home() {
               <button
                 id="session-decrement"
                 className="font-bold text-black mx-1"
-                onClick={()=>{setSession(session - 1),setTime(time-1)}}
+                onClick={()=>adjustLength('decrement', 'session')}
               >
                
                 <FaArrowDown />
               </button>
-              <span id="session-length">{session} </span>
+              <span id="session-length">{sessionLength} </span>
               <button
                 id="session-increment"
                 className="font-bold text-black mx-1"
-                onClick={()=>{setSession(session + 1),setTime(time+1)}}
+                onClick={()=>adjustLength('increment', 'session')}
               >
               
                 <FaArrowUp />
@@ -72,18 +151,18 @@ export default function Home() {
         </div>
 
         <div className="bg-zinc-900 p-5 md:text-2xl lg:text-5xl rounded-full">
-          {time}
+          {formatTime(time)}
         </div>
         <div className="flex flex-row my-2">
           <button id="start_stop" 
           className="font-bold text-black mx-1" 
-          // onClick={}
+          onClick={toggleTimer}
           >
             <GrResume />
           </button>
           <button id="reset"
            className="font-bold text-black mx-1"
-           onClick={()=>{setBreakl(5),setSession(25),setTime(25)}}
+           onClick={resetTimer}
            >
            
             <GrPowerReset />
@@ -101,6 +180,9 @@ export default function Home() {
             
             Abhishek
           </a>
+        </div>
+        <div className="text-sm text-red-700">
+          {end}
         </div>
       </div>
     </main>
